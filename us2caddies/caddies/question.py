@@ -2,7 +2,7 @@ __author__ = 'pwidqssg'
 
 from objects import cc_question
 from objects import question_grid
-from objects import question_item
+from objects.question_item import QuestionItem
 from objects import cc_question_universe
 from objects import instruction
 from objects import qi_rda
@@ -27,8 +27,19 @@ class Question:
         self.rd = []
         self.instruction = None
 
+        self.X = []
+        self.Y = []
+
     def add_code(self, val, text):
         self.codes.append({'cs_value': val, 'category': text})
+
+    def add_X_code(self, text):
+        self.X.append({'label': text})
+        return self.X[-1]
+
+    def add_Y_code(self, text):
+        self.Y.append({'label': text})
+        return self.Y[-1]
 
     def add_text(self, name, maxlen = None):
         self.rd.append({'type': 'Text' ,'label': name})
@@ -47,3 +58,12 @@ class Question:
 
     def add_instruction(self, text):
         self.instruction = text
+
+    def get_built_objects(self):
+        if self.type == 'QuestionItem':
+            obj = {}
+            obj['question_item'] = QuestionItem(id=0, textid='qi_'+self.textid, )
+        elif self.type == 'QuestionGrid':
+            pass
+        else:
+            raise StandardError('Unknown Caddies question type')

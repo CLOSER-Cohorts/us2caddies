@@ -4,7 +4,7 @@ from base import CaddiesObject
 
 class QuestionGird(CaddiesObject):
     def __init__(self, id, textid = '', literal = '', intent = '', vertical_codelist_id = None,
-                 vertical_roster_rows = None, vertical_roster_label = '', horizontal_codelist_id = None,
+                 vertical_roster_rows = 0, vertical_roster_label = '', horizontal_codelist_id = None,
                  corner_label = '', instruction_id = None):
         self.id = id
         self.textid = textid
