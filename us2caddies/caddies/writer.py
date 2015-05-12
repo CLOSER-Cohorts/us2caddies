@@ -2,6 +2,7 @@ __author__ = 'pwidqssg'
 
 import os
 from objects.base import CaddiesObject
+from builder import Builder
 
 class Writer:
     def __init__(self, output = None):
@@ -22,6 +23,16 @@ class Writer:
         if isinstance(self.out, file):
             self.out.close()
 
+    def write(self, obj, update = False, f = None):
+        if isinstance(obj, Builder):
+            for prop, val in obj.__dict__.iteritems():
+                for item in val:
+                    self.writeSQL(item, update, f)
+        elif isinstance(obj, CaddiesObject):
+            self.writeSQL(obj, update, f)
+        else:
+            Exception('Cannot write this type of object')
+
     def writeSQL(self, obj, update = False, f = None):
         out = self.getOutput(f)
 
@@ -34,23 +45,33 @@ class Writer:
         sql_2nd_str = ''
         for prop, val in obj.__dict__.iteritems():
             if prop.startswith('_'): continue
-            if not val: continue
+            if val == None or val == "": continue
             if update:
                 if not prop == 'id':
-                    sql_1st_str += prop + '="' + str(val) + '",'
+                    try:
+                        num = float(val)
+                        num = int(num) if num.is_integer() else num
+                        sql_1st_str += prop + '=' + unicode(num) + ','
+                    except ValueError:
+                        sql_1st_str += prop + '="' + unicode(val) + '",'
                 else:
-                    sql_2nd_str = 'id=' + str(val) + ','
+                    sql_2nd_str = 'id=' + unicode(val) + ','
             else:
                 sql_1st_str += prop + ','
-                sql_2nd_str += '"' + str(val) + '",'
+                try:
+                    num = float(val)
+                    num = int(num) if num.is_integer() else num
+                    sql_2nd_str += '' + unicode(num) + ','
+                except ValueError:
+                    sql_2nd_str += '"' + unicode(val) + '",'
 
         sql_1st_str = sql_1st_str[:-1]
         sql_2nd_str = sql_2nd_str[:-1]
 
         if update:
-            return 'UPDATE ' + table_name + ' SET ' + sql_1st_str + ' WHERE ' + sql_2nd_str + ';\n'
+            return unicode('UPDATE ' + table_name + ' SET ' + sql_1st_str + ' WHERE ' + sql_2nd_str + ';\n').encode('ascii', 'xmlcharrefreplace')
         else:
-            return 'INSERT INTO ' + table_name + ' (' + sql_1st_str + ') VALUES (' + sql_2nd_str + ');\n'
+            return unicode('INSERT INTO ' + table_name + ' (' + sql_1st_str + ') VALUES (' + sql_2nd_str + ');\n').encode('ascii', 'xmlcharrefreplace')
 
     def getOutput(self, f):
         if f == None:

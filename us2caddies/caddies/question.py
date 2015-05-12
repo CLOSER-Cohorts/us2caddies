@@ -43,15 +43,12 @@ class Question:
 
     def add_text(self, name, maxlen = None):
         self.rd.append({'type': 'Text' ,'label': name})
-        if not maxlen == None:
-            self.rd[-1]['maxlen'] = maxlen
+        self.rd[-1]['maxlen'] = maxlen
 
     def add_numeric(self, name, type='Integer', min_val=None, max_val=None):
         self.rd.append({'label': name, 'type': type})
-        if not min_val == None:
-            self.rd[-1]['min'] = min_val
-        if not max_val == None:
-            self.rd[-1]['min'] = max_val
+        self.rd[-1]['min'] = min_val
+        self.rd[-1]['max'] = max_val
 
     def add_datetime(self, name, type='Date', format=''):
         self.rd.append({'label': name, 'type': type, 'format': format})

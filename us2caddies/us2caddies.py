@@ -49,5 +49,7 @@ class us2c:
         for filepath in self.filepaths:
             with USReader(filepath) as reader:
                 reader.readInstance()
+                QRE = reader.readQRE()
                 with Writer('test.sql') as wrtr:
                     wrtr.writeSQL(reader.instance, update=True)
+                    wrtr.write(QRE)
