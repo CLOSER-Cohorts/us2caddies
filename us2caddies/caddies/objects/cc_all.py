@@ -13,5 +13,5 @@ class CcAll(CaddiesObject):
         self._order_counter = 0
 
     def get_parent_order(self):
-        self.order_counter += 1
-        return self.order_counter
+        self._order_counter += 1
+        return self._order_counter

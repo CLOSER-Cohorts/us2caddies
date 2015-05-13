@@ -1,10 +1,13 @@
 __author__ = 'pwidqssg'
 
 from question import Question
+from objects.cc_all import CcAll
 from objects.cc_question import CcQuestion
 from objects.question_grid import QuestionGird
 from objects.question_item import QuestionItem
 from objects.cc_question_universe import CcQuestionUniverse
+from objects.cc_statement import CcStatement
+from objects.cc_ifthenelse import CcIfthenelse
 from objects.instruction import Instruction
 from objects.qi_rda import QiRda
 from objects.qgrid_rda import QgridRda
@@ -16,7 +19,7 @@ from objects.response_domain_code import ResponseDomainCode
 from objects.response_domain_datetime import ResponseDomainDatetime
 from objects.response_domain_numeric import ResponseDomainNumeric
 from objects.response_domain_text import ResponseDomainText
-from objects import response_unit
+from objects.response_unit import ResponseUnit
 from objects import universe
 
 class Builder:
@@ -44,6 +47,12 @@ class Builder:
         self.response_domain_text = []
         self.response_unit = []
         self.universe = []
+
+        self._top_order = 0
+
+    def useDefaultInterviewee(self):
+        self.response_unit = []
+        self.response_unit.append(ResponseUnit(len(self.response_unit)+1, 'Default'))
 
     def buildRDC(self, codes, textid):
         self.code_scheme.append(
@@ -159,10 +168,32 @@ class Builder:
 
         return rdas
 
+    def addStatement(self, textid, text, parent = None):
+        self.cc_statement.append(
+            CcStatement(
+                len(self.cc_statement)+1,
+                's_' + textid,
+                text
+            )
+        )
+        self.addCcAll('CcStatement', self.cc_statement[-1].id, parent)
+        return self.cc_all[-1]
+
+    def addCondition(self, textid, text, parent = None):
+        self.cc_ifthenelse.append(
+            CcIfthenelse(
+                len(self.cc_ifthenelse)+1,
+                'c_' + textid,
+                text
+            )
+        )
+        self.addCcAll('CcIfthenelse', self.cc_ifthenelse[-1].id, parent)
+        return self.cc_all[-1]
+
     def newQuestion(self, textid, literal, type='QuestionItem'):
         return Question(textid, literal, type)
 
-    def submitQuestion(self, question):
+    def submitQuestion(self, question, parent=None):
         #Instruction
         if question.instruction != None:
             instr_id = None
@@ -214,3 +245,53 @@ class Builder:
 
         #Attach instruction
         cad_question.instruction_id = instr_id
+
+        ru_id = None
+        if question.interviewee == None:
+            if len(self.response_unit) == 0:
+                self.useDefaultInterviewee()
+            ru_id = self.response_unit[0].id
+        else:
+            for ru in self.response_unit:
+                if ru.text == question.interviewee:
+                    ru_id = ru.id
+                    break
+            if ru_id == None:
+                self.response_unit.append(ResponseUnit(len(self.response_unit)+1, question.interviewee))
+                ru_id = self.response_unit[-1].id
+
+        self.cc_question.append(
+            CcQuestion(
+                len(self.cc_question)+1,
+                'qc_'+question.textid,
+                cad_question.id,
+                ru_id,
+                question.type
+            )
+        )
+
+        self.addCcAll('CcQuestion', self.cc_question[-1].id, parent)
+
+    def addCcAll(self, type, id, parent):
+        if parent == None:
+            parent_id = 1
+            ifbranch = 'f'
+        else:
+            parent_id = parent.id
+            ifbranch = 't' if parent.construct_type == 'CcIfthenelse' else 'f'
+
+        if parent_id == 1:
+            self._top_order += 1
+            position = self._top_order
+        else:
+            position = parent.get_parent_order()
+        self.cc_all.append(
+            CcAll(
+                len(self.cc_all)+2,
+                type,
+                id,
+                parent_id,
+                position,
+                ifbranch
+            )
+        )

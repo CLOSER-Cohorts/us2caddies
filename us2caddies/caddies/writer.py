@@ -1,6 +1,6 @@
 __author__ = 'pwidqssg'
 
-import os
+import datetime
 from objects.base import CaddiesObject
 from builder import Builder
 
@@ -26,6 +26,7 @@ class Writer:
     def write(self, obj, update = False, f = None):
         if isinstance(obj, Builder):
             for prop, val in obj.__dict__.iteritems():
+                if prop.startswith('_'): continue
                 for item in val:
                     self.writeSQL(item, update, f)
         elif isinstance(obj, CaddiesObject):
@@ -53,7 +54,7 @@ class Writer:
                         num = int(num) if num.is_integer() else num
                         sql_1st_str += prop + '=' + unicode(num) + ','
                     except ValueError:
-                        sql_1st_str += prop + '="' + unicode(val) + '",'
+                        sql_1st_str += prop + '="' + self.scrubString(val) + '",'
                 else:
                     sql_2nd_str = 'id=' + unicode(val) + ','
             else:
@@ -63,7 +64,14 @@ class Writer:
                     num = int(num) if num.is_integer() else num
                     sql_2nd_str += '' + unicode(num) + ','
                 except ValueError:
-                    sql_2nd_str += '"' + unicode(val) + '",'
+                    sql_2nd_str += '"' + self.scrubString(val) + '",'
+
+        if update:
+            sql_1st_str += 'updated_at="' + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f") + '",'
+        else:
+            sql_1st_str += 'created_at,updated_at,'
+            sql_2nd_str += '"' + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f") + \
+                           '","' + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f") + '",'
 
         sql_1st_str = sql_1st_str[:-1]
         sql_2nd_str = sql_2nd_str[:-1]
@@ -81,3 +89,7 @@ class Writer:
         if not isinstance(out, file):
             raise IOError('No output file specified for caddies.Writer write function')
         return out
+
+    def scrubString(self, input):
+        output = input.replace('\n',' ').replace('\r',' ')
+        return unicode(' '.join(output.split()))

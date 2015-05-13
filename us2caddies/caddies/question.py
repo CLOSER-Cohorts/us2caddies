@@ -26,6 +26,7 @@ class Question:
         self.codes = []
         self.rd = []
         self.instruction = None
+        self.interviewee = None
 
         self.X = []
         self.Y = []
@@ -55,6 +56,9 @@ class Question:
 
     def add_instruction(self, text):
         self.instruction = text
+
+    def add_interviewee(self, text):
+        self.interviewee = text
 
     def get_built_objects(self):
         if self.type == 'QuestionItem':
