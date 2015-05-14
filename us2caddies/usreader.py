@@ -116,6 +116,26 @@ class USReader:
                     continue
             i += 1
 
+        for expr in logic_expressions:
+            if (isinstance(expr, basestring)): continue
+            if (expr[0][:3] == 'qc_' and expr[2][:3] == 'qc_'): continue
+            if (expr[0][:3] == 'qc_'):
+                qref = expr[0]
+                val = expr[2]
+            else:
+                qref = expr[2]
+                val = expr[0]
+
+            for quest in self.builder._submitted_questions:
+                if 'qc_' + quest.textid == qref:
+                    if len(quest.codes) > 0:
+                        pass
+                    elif len([x for x in quest.rd if x['type'] == 'Text']):
+                        val = '"' + val + '"'
+                    elif len([x for x in quest.rd if x['type'] == 'Integer' or x['type'] == 'Float']):
+                        val = "'" + val + "'"
+            expr[0] = qref
+            expr[2] = val
 
         logic_expressions = [' '.join(x) if isinstance(x, list) else x for x in logic_expressions]
         logic = ' '.join(logic_expressions)
@@ -139,5 +159,4 @@ class USReader:
         for xml_elem in self.tree.find('.//module/specification_elements/dataout/specification_elements'):
             self.readElement(module, xml_elem)
 
-        print "Builder created " + str(len(self.builder.question_item)) + " question items."
         return self.builder

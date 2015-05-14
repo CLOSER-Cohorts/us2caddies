@@ -9,6 +9,8 @@ class us2c:
     def __init__(self):
         self.filepaths = []
         self.files = []
+        self.QREs = []
+        self.outfiles =[]
 
     """ Specialist function for validating the given filename for the input
     file from the command line. If the file exists and is readable, the
@@ -27,9 +29,18 @@ class us2c:
                             metavar='FILE',
                             type=lambda x: self.is_valid_file(parser, x)
                             )
+        parser.add_argument('--results',
+                            dest='results',
+                            action='store_true',
+                            help='Display the results of the conversion after completion'
+                            )
         args = parser.parse_args()
         if not args.infilename == None:
             self.filepaths.append(args.infilename)
+        if args.results:
+            self.results = True
+        else:
+            self.results = False
 
     def add_file_path(self, filepath):
         if not isinstance(filepath, basestring):
@@ -47,9 +58,19 @@ class us2c:
 
     def load(self):
         for filepath in self.filepaths:
+            self.QREs.append({'in':filepath})
+            self.QREs[-1]['out'] = os.path.abspath(filepath).rsplit('.')[0] + '.sql'
             with USReader(filepath) as reader:
                 reader.readInstance()
-                QRE = reader.readQRE()
-                with Writer('test.sql') as wrtr:
-                    wrtr.writeSQL(reader.instance, update=True)
-                    wrtr.write(QRE)
+                self.QREs[-1]['instance'] = reader.instance
+                self.QREs[-1]['build'] = reader.readQRE()
+
+    def write(self):
+        for QRE in self.QREs:
+            with Writer(QRE['out']) as wrtr:
+                wrtr.writeSQL(QRE['instance'], update=True)
+                wrtr.write(QRE['build'])
+
+            if self.results:
+                print '=== ' + QRE['instance'].instrument + ' ==='
+                QRE['build'].printStats()

@@ -48,6 +48,7 @@ class Builder:
         self.response_unit = []
         self.universe = []
 
+        self._submitted_questions = []
         self._top_order = 0
 
     def useDefaultInterviewee(self):
@@ -203,6 +204,8 @@ class Builder:
         return Question(textid, literal, type)
 
     def submitQuestion(self, question, parent=None):
+
+        self._submitted_questions.append(question)
         #Instruction
         if question.instruction != None:
             instr_id = None
@@ -304,6 +307,13 @@ class Builder:
                 ifbranch
             )
         )
+
+    def printStats(self):
+        items = self.__dict__.items()
+        items.sort(key=lambda x: x[0])
+        for prop, val in items:
+            if prop.startswith('_'): continue
+            print '%5i' % len(val) + "  " + prop + "."
 
     def createID(self, prefix, textid, list, field = 'textid'):
 
