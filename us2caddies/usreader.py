@@ -39,6 +39,12 @@ class USReader:
             else:
                 question = self.builder.newQuestion(textid, literal.text)
 
+                instr = xml_q.find('qt_properties/help')
+                if instr != None:
+                    instr = instr.text.strip()
+                    if instr != '':
+                        question.instruction = instr
+
                 if decimal != None:
                     range = xml_q.find('qt_properties/range')
                     if range != None:
@@ -47,9 +53,9 @@ class USReader:
                         question.add_numeric(textid, 'Integer' if str(decimal.text) == '0' else 'Float', min, max)
 
                 for option in options:
-                    opt_text = option.find('text').text
-                    if opt_text == None:
-                        opt_text = option.find('label').text
+                    opt_text = option.find('text').text.strip()
+                    if opt_text == None or opt_text == "":
+                        opt_text = option.find('label').text.strip()
                     question.add_code(option.get('value'), opt_text)
 
                 self.builder.submitQuestion(question, parent)
@@ -60,10 +66,7 @@ class USReader:
 
         logic = logic.replace('=','==').replace('<>','!=')[1:-1]
         logic_chunks = re.split('([^\w\.]+)', logic)
-        for chunk in logic_chunks:
-            textid = chunk
-            if re.match('^[\w]+$', textid) != None:
-                break
+        textid = logic_chunks[0].split('.')[0]
         temp = []
         for chunk in logic_chunks:
             chunk = chunk.strip()
@@ -100,10 +103,24 @@ class USReader:
                                             logic_expressions[i-2][1],
                                             logic_expressions[i][0]]
 
+        logic_expressions = [x for x in logic_expressions if isinstance(x, basestring) or ((isinstance(x, list) and (x[0][:3] == 'qc_' or x[2][:3] == 'qc_')))]
+
+        i = 0
+        while i < len(logic_expressions):
+            if isinstance(logic_expressions[i], basestring):
+                if i == 0 or i+1 >= len(logic_expressions):
+                    logic_expressions.pop(i)
+                    continue
+                if not isinstance(logic_expressions[i-1], list) or not isinstance(logic_expressions[i+1], list):
+                    logic_expressions.pop(i)
+                    continue
+            i += 1
+
+
         logic_expressions = [' '.join(x) if isinstance(x, list) else x for x in logic_expressions]
         logic = ' '.join(logic_expressions)
 
-        text = text + ' ' + logic
+        text = 'If ' + text + ' [' + logic + ']'
 
         cond = self.builder.addCondition(textid, text, parent)
 

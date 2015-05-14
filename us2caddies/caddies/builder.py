@@ -55,10 +55,13 @@ class Builder:
         self.response_unit.append(ResponseUnit(len(self.response_unit)+1, 'Default'))
 
     def buildRDC(self, codes, textid):
+
+        new_textid = self.createID('cs', textid, self.code_scheme, 'label')
+
         self.code_scheme.append(
             CodeScheme(
                 len(self.code_scheme)+1,
-                'cs_q' + textid
+                new_textid
             )
         )
         cs_id = self.code_scheme[-1].id
@@ -169,10 +172,13 @@ class Builder:
         return rdas
 
     def addStatement(self, textid, text, parent = None):
+
+        new_textid = self.createID('s', textid, self.cc_statement)
+
         self.cc_statement.append(
             CcStatement(
                 len(self.cc_statement)+1,
-                's_' + textid,
+                new_textid,
                 text
             )
         )
@@ -180,10 +186,13 @@ class Builder:
         return self.cc_all[-1]
 
     def addCondition(self, textid, text, parent = None):
+
+        new_textid = self.createID('c', textid, self.cc_ifthenelse)
+
         self.cc_ifthenelse.append(
             CcIfthenelse(
                 len(self.cc_ifthenelse)+1,
-                'c_' + textid,
+                new_textid,
                 text
             )
         )
@@ -295,3 +304,45 @@ class Builder:
                 ifbranch
             )
         )
+
+    def createID(self, prefix, textid, list, field = 'textid'):
+
+        suffix_count = 1
+        if not self.usedID(prefix + '_' + textid + '_' + self.romanNumerial(suffix_count), list, field):
+            new_textid = prefix + '_' + textid
+            for con in list:
+                if con.__dict__[field] == new_textid:
+                    con.__dict__[field] = prefix + '_' + textid + '_' + self.romanNumerial(suffix_count)
+                    new_textid = prefix + '_' + textid + '_' + self.romanNumerial(suffix_count+1)
+                    break
+        else:
+            suffix_count+=1
+            while self.usedID(prefix + '_' + textid + '_' + self.romanNumerial(suffix_count), list, field):
+                suffix_count+=1
+            new_textid = prefix + '_' + textid + '_' + self.romanNumerial(suffix_count)
+        return new_textid
+
+    def usedID(self, textid, list, field = 'textid'):
+            for obj in list:
+                if obj.__dict__[field] == textid:
+                    return True
+            return False
+
+    def romanNumerial(self, val):
+        numerials = (
+            ('l', 50),
+            ('xl', 40),
+            ('ix', 9),
+            ('v', 5),
+            ('iv', 4),
+            ('i', 1)
+        )
+        if int(val) != val:
+            raise Exception('Value must be an integer')
+
+        out = ''
+        for letter, decimal in numerials:
+            while val >= decimal:
+                out += letter
+                val -= decimal
+        return out
