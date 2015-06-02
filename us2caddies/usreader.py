@@ -24,7 +24,7 @@ class USReader:
 
     def readInstance(self):
         self.instance = instance.Instance(id=1, agency= 'uk.us')
-        self.instance.instrument = self.tree.find('.//module/rm_properties/label').text
+        self.instance.instrument = self.tree.find('.//specification//sd_properties/label').text
 
     def readQuestion(self, module, xml_q, parent= None):
         literal = xml_q.find('qt_properties/text')
@@ -147,13 +147,25 @@ class USReader:
         for xml_elem in  xml_c.find('if/specification_elements'):
             self.readElement(module, xml_elem, cond)
 
+    def readModule(self, xml_m, parent = None):
+
+
     def readElement(self, module, element, parent=None):
         if element.tag == 'question':
             self.readQuestion(module, element, parent)
         elif element.tag == 'branch':
             self.readCondition(module, element, parent)
+        elif element.tag == 'module':
+            self.readModule(element, parent)
+        elif element.tag == 'dataout':
+            self.readDataout(module, element, parent)
 
     def readQRE(self):
+
+        first_module_parent = self.treee.find('../module/..')
+        for xml_elem in list(first_module_parent):
+            self.readElement('', xml_elem)
+
         module = self.tree.find('.//specification_elements/module').get('name')
 
         for xml_elem in self.tree.find('.//module/specification_elements/dataout/specification_elements'):
