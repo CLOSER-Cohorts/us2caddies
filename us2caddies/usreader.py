@@ -61,15 +61,26 @@ class USReader:
                 self.builder.submitQuestion(question, parent)
 
     def readCondition(self, module, xml_c, parent = None):
-        logic = xml_c.find('if/condition').text
-        text = xml_c.find('if/sd_properties/label').text
+        condition = xml_c.find('if/condition')
+        if condition == None:
+            logic = ""
+        else:
+            logic = condition.text
+        label = xml_c.find('if/sd_properties/label')
+        if label == None:
+            text = "NO CONDITION TEXT"
+        else:
+            text = label.text
 
-        logic = logic.replace('=','==').replace('<>','!=')[1:-1]
-        logic_chunks = re.split('([^\w\.]+)', logic)
+        if logic[:1] == '[' and logic[-1:] == ']':
+            logic = logic[1:-1]
+
+        logic_chunks = re.split('([^\w\.])', logic)
+
         textid = logic_chunks[0].split('.')[0]
         temp = []
         for chunk in logic_chunks:
-            chunk = chunk.strip()
+            chunk = chunk.strip().lower()
             if re.match('^[\w]+$', chunk) != None:
                 found = False
                 for qc in self.builder.cc_question:
@@ -78,23 +89,35 @@ class USReader:
                         found = True
                         break
                 if not found:
-                    temp.append(chunk)
+                    temp.append(chunk.replace('or','||').replace('and','&&'))
             elif chunk == '':
                 pass
             else:
-                temp.append(chunk.replace('|','||').replace('&','&&'))
+                temp.append(chunk.replace('|','||').replace(',','||').replace('&','&&'))
         logic_chunks = temp
 
         logic_expressions = []
         logic_expressions.append([])
         while len(logic_chunks) > 0:
             chunk = logic_chunks.pop(0)
-            if chunk == '||' or chunk == '&&':
+            if chunk == '||' or chunk == '&&' or chunk == '(' or chunk == ')':
                 logic_expressions.append(chunk)
                 logic_expressions.append([])
-
+            elif chunk == '<':
+                if len(logic_chunks) > 0 and logic_chunks[0] == '>':
+                    logic_chunks.pop(0)
+                    logic_expressions[-1].append('!=')
             else:
                 logic_expressions[-1].append(chunk)
+
+        temp_logic_expressions = []
+        for expression in logic_expressions:
+            if isinstance(expression, list):
+                if len(expression) > 0:
+                    temp_logic_expressions.append(expression)
+            else:
+                temp_logic_expressions.append(expression)
+        logic_expressions = temp_logic_expressions
 
         for i in range(len(logic_expressions)):
             if isinstance(logic_expressions[i], list):
@@ -116,6 +139,7 @@ class USReader:
                     continue
             i += 1
 
+        print logic_expressions
         for expr in logic_expressions:
             if (isinstance(expr, basestring)): continue
             if (expr[0][:3] == 'qc_' and expr[2][:3] == 'qc_'): continue
@@ -140,6 +164,7 @@ class USReader:
         logic_expressions = [' '.join(x) if isinstance(x, list) else x for x in logic_expressions]
         logic = ' '.join(logic_expressions)
 
+        logic = logic.replace('=','==')
         text = 'If ' + text + ' [' + logic + ']'
 
         cond = self.builder.addCondition(textid, text, parent)
@@ -148,7 +173,20 @@ class USReader:
             self.readElement(module, xml_elem, cond)
 
     def readModule(self, xml_m, parent = None):
+        seq = self.builder.addSequence(xml_m.find('rm_properties/label').text, parent)
 
+        for xml_elem in  xml_m.find('specification_elements'):
+            self.readElement(xml_m.get('name'), xml_elem, seq)
+
+    def readDataout(self, module, xml_d, parent = None):
+        for xml_elem in  xml_d.find('specification_elements'):
+            self.readElement(module, xml_elem, parent)
+
+    def readLoop(self, module, xml_l, parent = None):
+        loop = self.builder.addLoop('default','_var',loop_while=xml_l.get('args'), parent=parent)
+
+        for xml_elem in  xml_l.find('specification_elements'):
+            self.readElement(module, xml_elem, loop)
 
     def readElement(self, module, element, parent=None):
         if element.tag == 'question':
@@ -159,10 +197,11 @@ class USReader:
             self.readModule(element, parent)
         elif element.tag == 'dataout':
             self.readDataout(module, element, parent)
+        elif element.tag == 'loop':
+            self.readLoop(module, element, parent)
 
     def readQRE(self):
-
-        first_module_parent = self.treee.find('../module/..')
+        first_module_parent = self.tree.find('.//module/..')
         for xml_elem in list(first_module_parent):
             self.readElement('', xml_elem)
 

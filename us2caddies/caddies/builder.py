@@ -7,6 +7,8 @@ from objects.question_grid import QuestionGird
 from objects.question_item import QuestionItem
 from objects.cc_question_universe import CcQuestionUniverse
 from objects.cc_statement import CcStatement
+from objects.cc_sequence import CcSequence
+from objects.cc_loop import CcLoop
 from objects.cc_ifthenelse import CcIfthenelse
 from objects.instruction import Instruction
 from objects.qi_rda import QiRda
@@ -200,6 +202,34 @@ class Builder:
         self.addCcAll('CcIfthenelse', self.cc_ifthenelse[-1].id, parent)
         return self.cc_all[-1]
 
+    def addSequence(self, textid, parent = None):
+
+        self.cc_sequence.append(
+            CcSequence(
+                len(self.cc_sequence)+2,
+                textid
+            )
+        )
+        self.addCcAll('CcSequence', self.cc_sequence[-1].id, parent)
+        return self.cc_all[-1]
+
+    def addLoop(self, textid, variable, inital = '', end = '', loop_while = '', parent = None):
+
+        new_textid = self.createID('l', textid, self.cc_loop)
+
+        self.cc_loop.append(
+            CcLoop(
+                len(self.cc_loop)+1,
+                new_textid,
+                variable,
+                inital,
+                end,
+                loop_while
+            )
+        )
+        self.addCcAll('CcLoop', self.cc_loop[-1].id, parent)
+        return self.cc_all[-1]
+
     def newQuestion(self, textid, literal, type='QuestionItem'):
         return Question(textid, literal, type)
 
@@ -342,6 +372,7 @@ class Builder:
         numerials = (
             ('l', 50),
             ('xl', 40),
+            ('x', 10),
             ('ix', 9),
             ('v', 5),
             ('iv', 4),
