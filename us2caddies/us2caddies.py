@@ -27,7 +27,7 @@ class us2c:
                             required=False,
                             help='Input file to be converted',
                             metavar='FILE',
-                            type=lambda x: self.is_valid_file(parser, x)
+                            type=argparse.FileType('r')
                             )
         parser.add_argument('--results',
                             dest='results',
@@ -36,7 +36,7 @@ class us2c:
                             )
         args = parser.parse_args()
         if not args.infilename == None:
-            self.filepaths.append(args.infilename)
+            self.filepaths.append(args.infilename.name)
         if args.results:
             self.results = True
         else:

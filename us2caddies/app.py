@@ -1,3 +1,4 @@
+#!/usr/bin/python
 __author__ = 'pwidqssg'
 
 import us2caddies as us2c

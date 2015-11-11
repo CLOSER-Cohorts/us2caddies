@@ -53,10 +53,10 @@ class USReader:
                         question.add_numeric(textid, 'Integer' if str(decimal.text) == '0' else 'Float', min, max)
 
                 for option in options:
-                    opt_text = option.find('text').text.strip()
-                    if opt_text == None or opt_text == "":
-                        opt_text = option.find('label').text.strip()
-                    question.add_code(option.get('value'), opt_text)
+                    opt_text = option.find('text').text
+                    if opt_text == None or opt_text.strip() == "":
+                        opt_text = option.find('label').text
+                    question.add_code(option.get('value'), opt_text.strip())
 
                 self.builder.submitQuestion(question, parent)
 
@@ -72,99 +72,105 @@ class USReader:
         else:
             text = label.text
 
-        if logic[:1] == '[' and logic[-1:] == ']':
-            logic = logic[1:-1]
+        try:
+			if logic[:1] == '[' and logic[-1:] == ']':
+				logic = logic[1:-1]
+			
+			logic = logic.replace('&lt;','<').replace('&gt;','>')
 
-        logic_chunks = re.split('([^\w\.])', logic)
+			logic_chunks = re.split('([^\w\.])', logic)
 
-        textid = logic_chunks[0].split('.')[0]
-        temp = []
-        for chunk in logic_chunks:
-            chunk = chunk.strip().lower()
-            if re.match('^[\w]+$', chunk) != None:
-                found = False
-                for qc in self.builder.cc_question:
-                    if qc.textid == 'qc_' + chunk:
-                        temp.append('qc_' + chunk)
-                        found = True
-                        break
-                if not found:
-                    temp.append(chunk.replace('or','||').replace('and','&&'))
-            elif chunk == '':
-                pass
-            else:
-                temp.append(chunk.replace('|','||').replace(',','||').replace('&','&&'))
-        logic_chunks = temp
+			textid = logic_chunks[0].split('.')[0]
+			temp = []
+			for chunk in logic_chunks:
+				chunk = chunk.strip().lower()
+				if re.match('^[\w]+$', chunk) != None:
+					found = False
+					for qc in self.builder.cc_question:
+						if qc.textid == 'qc_' + chunk:
+							temp.append('qc_' + chunk)
+							found = True
+							break
+					if not found:
+						temp.append(chunk.replace('or','||').replace('and','&&'))
+				elif chunk == '':
+					pass
+				else:
+					temp.append(chunk.replace('|','||').replace(',','||').replace('&','&&'))
+			logic_chunks = temp
 
-        logic_expressions = []
-        logic_expressions.append([])
-        while len(logic_chunks) > 0:
-            chunk = logic_chunks.pop(0)
-            if chunk == '||' or chunk == '&&' or chunk == '(' or chunk == ')':
-                logic_expressions.append(chunk)
-                logic_expressions.append([])
-            elif chunk == '<':
-                if len(logic_chunks) > 0 and logic_chunks[0] == '>':
-                    logic_chunks.pop(0)
-                    logic_expressions[-1].append('!=')
-            else:
-                logic_expressions[-1].append(chunk)
+			logic_expressions = []
+			logic_expressions.append([])
+			while len(logic_chunks) > 0:
+				chunk = logic_chunks.pop(0)
+				if chunk == '||' or chunk == '&&' or chunk == '(' or chunk == ')':
+					logic_expressions.append(chunk)
+					logic_expressions.append([])
+				elif chunk == '<':
+					if len(logic_chunks) > 0 and logic_chunks[0] == '>':
+						logic_chunks.pop(0)
+						logic_expressions[-1].append('!=')
+					else:
+						logic_expressions[-1].append(chunk)
+				else:
+					logic_expressions[-1].append(chunk)
 
-        temp_logic_expressions = []
-        for expression in logic_expressions:
-            if isinstance(expression, list):
-                if len(expression) > 0:
-                    temp_logic_expressions.append(expression)
-            else:
-                temp_logic_expressions.append(expression)
-        logic_expressions = temp_logic_expressions
+			temp_logic_expressions = []
+			for expression in logic_expressions:
+				if isinstance(expression, list):
+					if len(expression) > 0:
+						temp_logic_expressions.append(expression)
+				else:
+					temp_logic_expressions.append(expression)
+			logic_expressions = temp_logic_expressions
 
-        for i in range(len(logic_expressions)):
-            if isinstance(logic_expressions[i], list):
-                if len(logic_expressions[i]) == 1 and i > 1:
-                    logic_expressions[i] = [logic_expressions[i-2][0],
-                                            logic_expressions[i-2][1],
-                                            logic_expressions[i][0]]
+			for i in range(len(logic_expressions)):
+				if isinstance(logic_expressions[i], list):
+					if len(logic_expressions[i]) == 1 and i > 1:
+						logic_expressions[i] = [logic_expressions[i-2][0],
+												logic_expressions[i-2][1],
+												logic_expressions[i][0]]
 
-        logic_expressions = [x for x in logic_expressions if isinstance(x, basestring) or ((isinstance(x, list) and (x[0][:3] == 'qc_' or x[2][:3] == 'qc_')))]
+			logic_expressions = [x for x in logic_expressions if isinstance(x, basestring) or ((isinstance(x, list) and (x[0][:3] == 'qc_' or x[2][:3] == 'qc_')))]
 
-        i = 0
-        while i < len(logic_expressions):
-            if isinstance(logic_expressions[i], basestring):
-                if i == 0 or i+1 >= len(logic_expressions):
-                    logic_expressions.pop(i)
-                    continue
-                if not isinstance(logic_expressions[i-1], list) or not isinstance(logic_expressions[i+1], list):
-                    logic_expressions.pop(i)
-                    continue
-            i += 1
+			i = 0
+			while i < len(logic_expressions):
+				if isinstance(logic_expressions[i], basestring):
+					if i == 0 or i+1 >= len(logic_expressions):
+						logic_expressions.pop(i)
+						continue
+					if not isinstance(logic_expressions[i-1], list) or not isinstance(logic_expressions[i+1], list):
+						logic_expressions.pop(i)
+						continue
+				i += 1
 
-        print logic_expressions
-        for expr in logic_expressions:
-            if (isinstance(expr, basestring)): continue
-            if (expr[0][:3] == 'qc_' and expr[2][:3] == 'qc_'): continue
-            if (expr[0][:3] == 'qc_'):
-                qref = expr[0]
-                val = expr[2]
-            else:
-                qref = expr[2]
-                val = expr[0]
+			for expr in logic_expressions:
+				if (isinstance(expr, basestring)): continue
+				if (expr[0][:3] == 'qc_' and expr[2][:3] == 'qc_'): continue
+				if (expr[0][:3] == 'qc_'):
+					qref = expr[0]
+					val = expr[2]
+				else:
+					qref = expr[2]
+					val = expr[0]
 
-            for quest in self.builder._submitted_questions:
-                if 'qc_' + quest.textid == qref:
-                    if len(quest.codes) > 0:
-                        pass
-                    elif len([x for x in quest.rd if x['type'] == 'Text']):
-                        val = '"' + val + '"'
-                    elif len([x for x in quest.rd if x['type'] == 'Integer' or x['type'] == 'Float']):
-                        val = "'" + val + "'"
-            expr[0] = qref
-            expr[2] = val
+				for quest in self.builder._submitted_questions:
+					if 'qc_' + quest.textid == qref:
+						if len(quest.codes) > 0:
+							pass
+						elif len([x for x in quest.rd if x['type'] == 'Text']):
+							val = '"' + val + '"'
+						elif len([x for x in quest.rd if x['type'] == 'Integer' or x['type'] == 'Float']):
+							val = "'" + val + "'"
+				expr[0] = qref
+				expr[2] = val
 
-        logic_expressions = [' '.join(x) if isinstance(x, list) else x for x in logic_expressions]
-        logic = ' '.join(logic_expressions)
+			logic_expressions = [' '.join(x) if isinstance(x, list) else x for x in logic_expressions]
+			logic = ' '.join(logic_expressions)
 
-        logic = logic.replace('=','==')
+			logic = logic.replace('=','==')
+        except:
+            logic = ''
         text = 'If ' + text + ' [' + logic + ']'
 
         cond = self.builder.addCondition(textid, text, parent)
@@ -179,8 +185,21 @@ class USReader:
             self.readElement(xml_m.get('name'), xml_elem, seq)
 
     def readDataout(self, module, xml_d, parent = None):
+        label = xml_d.find('sd_properties/label')
+        pass_down = parent
+        
+        if label != None:
+            seq = self.builder.addSequence(xml_d.find('sd_properties/label').text, parent)
+            pass_down = seq
+    
         for xml_elem in  xml_d.find('specification_elements'):
-            self.readElement(module, xml_elem, parent)
+            self.readElement(module, xml_elem, pass_down)
+            
+    def readSection(self, module, xml_s, parent = None):
+        seq = self.builder.addSequence(xml_s.find('sd_properties/label').text, parent)
+    
+        for xml_elem in  xml_s.find('specification_elements'):
+            self.readElement(module, xml_elem, seq)
 
     def readLoop(self, module, xml_l, parent = None):
         loop = self.builder.addLoop('default','_var',loop_while=xml_l.get('args'), parent=parent)
@@ -197,6 +216,8 @@ class USReader:
             self.readModule(element, parent)
         elif element.tag == 'dataout':
             self.readDataout(module, element, parent)
+        elif element.tag == 'section':
+            self.readSection(module, element, parent)
         elif element.tag == 'loop':
             self.readLoop(module, element, parent)
 
@@ -207,7 +228,7 @@ class USReader:
 
         module = self.tree.find('.//specification_elements/module').get('name')
 
-        for xml_elem in self.tree.find('.//module/specification_elements/dataout/specification_elements'):
-            self.readElement(module, xml_elem)
+        #for xml_elem in self.tree.find('.//module/specification_elements/dataout/specification_elements'):
+        #    self.readElement(module, xml_elem)
 
         return self.builder
