@@ -24,7 +24,21 @@ class USReader:
         # os.unlink(self.filepath)
 
     def extractText(self, node):
-        return "".join(node.itertext())
+        chunks = []
+        for sub in node.iter():
+            add_brackets = False
+            if sub.tag == 'format' and sub.attrib['code'] == 'TF':
+                add_brackets = True
+            if sub.text is not None:
+                if add_brackets:
+                    chunks.append('[')
+                chunks.append(sub.text)
+                if add_brackets:
+                    chunks.append(']')
+            if sub.tail is not None:
+                chunks.append(sub.tail)
+
+        return "".join(chunks)
 
     def readInstance(self):
         self.instance = instance.Instance(id=1, agency='uk.us')
@@ -90,11 +104,11 @@ class USReader:
             temp = []
             for chunk in logic_chunks:
                 chunk = chunk.strip().lower()
-                if re.match('^[\w]+$', chunk) != None:
+                if re.match('[a-zA-Z]', chunk) != None:
                     found = False
                     for qc in self.builder.cc_question:
                         if qc.textid[-1 * len(chunk):] == chunk:
-                            temp.append('qc_' + chunk)
+                            temp.append(qc.textid)
                             found = True
                             break
                     if not found:
