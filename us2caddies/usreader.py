@@ -34,7 +34,7 @@ class USReader:
         literal = xml_q.find('qt_properties/text')
         if literal != None:
 
-            textid = xml_q.get('name').replace(module + '.', '', 1)
+            textid = xml_q.get('name').replace('.', '_', 1)
 
             decimal = xml_q.find('qt_properties/decimals')
             options = xml_q.findall('qt_properties/options/option')
@@ -93,7 +93,7 @@ class USReader:
                 if re.match('^[\w]+$', chunk) != None:
                     found = False
                     for qc in self.builder.cc_question:
-                        if qc.textid == 'qc_' + chunk:
+                        if qc.textid[-1 * len(chunk):] == chunk:
                             temp.append('qc_' + chunk)
                             found = True
                             break
@@ -175,7 +175,7 @@ class USReader:
             logic_expressions = [' '.join(x) if isinstance(x, list) else x for x in logic_expressions]
             logic = ' '.join(logic_expressions)
 
-            logic = logic.replace('=', '==')
+            logic = logic.replace('=', '==').replace('!==', '!=')
         except:
             logic = ''
         text = 'If ' + text + ' [' + logic + ']'
