@@ -53,7 +53,7 @@ class USReader:
             decimal = xml_q.find('qt_properties/decimals')
             options = xml_q.findall('qt_properties/options/option')
 
-            if (decimal == None and len(options) == 0):
+            if (decimal == None and len(options) == 0) and xml_q.attrib['type'] != 'text':
                 self.builder.addStatement(textid, self.extractText(literal))
             else:
                 question = self.builder.newQuestion(textid, self.extractText(literal))
@@ -63,6 +63,9 @@ class USReader:
                     instr = self.extractText(instr).strip()
                     if instr != '':
                         question.instruction = instr
+
+                if xml_q.attrib['type'] == 'text':
+                    question.add_text('Generic text')
 
                 if decimal != None:
                     range = xml_q.find('qt_properties/range')
